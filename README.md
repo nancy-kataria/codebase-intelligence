@@ -1,13 +1,13 @@
 # Codebase Intelligence
 
-An AI-powered codebase analysis and intelligence platform. Upload any GitHub repository and get instant insights, summaries, and an intelligent chat interface to understand your codebase.
+A Retrieval-Augmented Generation (RAG) application for intelligent codebase analysis. Upload any GitHub repository and get instant AI-powered insights, summaries, and context-aware Q&A about your code through semantic search and vector embeddings.
 
 ## Features
 
 - 🔍 **Repository Analysis**: Automatically analyze GitHub repositories and extract meaningful insights
 - 📊 **Project Summarization**: Generate AI-powered summaries including tech stack, architecture patterns, and code statistics
-- 💬 **Intelligent Chat**: Ask questions about your codebase and get context-aware answers powered by RAG
-- 🚀 **Vector Embeddings**: Uses Pinecone for semantic search and retrieval-augmented generation
+- 💬 **RAG-Powered Chat**: Ask natural language questions and receive context-aware answers by retrieving relevant code snippets and augmenting LLM prompts
+- 🚀 **Vector Embeddings**: Uses Pinecone vector database for semantic search and efficient code context retrieval
 - 🔐 **Privacy First**: Code is processed in-memory and never permanently stored
 - ⚡ **Real-time Processing**: Stream-based UI updates for smooth user experience
 
@@ -20,10 +20,10 @@ An AI-powered codebase analysis and intelligence platform. Upload any GitHub rep
 - **Tailwind CSS** - Styling
 - **Zod** - Runtime type validation
 
-### AI & Vector Database
-- **LangChain** - LLM orchestration
-- **Pinecone** - Vector database
-- **OpenAI** - LLM & embeddings
+### AI & Vector Database (RAG Stack)
+- **LangChain** - Document loading, chunking, and LLM orchestration
+- **Pinecone** - Vector database for semantic search and retrieval
+- **OpenAI** - GPT-4o for generation, text-embedding-3-small for retrieval
 
 ## Getting Started
 
@@ -65,10 +65,13 @@ npm run dev
 
 The application will be available at `http://localhost:3000`
 
-API endpoints:
-- `/api/ingest` - POST: Ingest a GitHub repository
-- `/api/chat` - POST: Chat about the ingested codebase
-- `/api/summarize` - POST: Generate summaries of the codebase
+### RAG Pipeline
+
+The application implements a three-stage RAG workflow:
+
+1. **Ingestion** (`/api/ingest`): Loads GitHub repository files, chunks them into semantic segments, generates vector embeddings, and stores them in Pinecone with metadata
+2. **Summarization** (`/api/summarize`): Retrieves code context vectors and augments GPT-4o prompts to generate architecture summaries and tech stack analysis
+3. **Conversation** (`/api/chat`): For each user query, retrieves relevant code context from Pinecone and augments the LLM prompt to provide accurate, code-informed responses
 
 ### Build
 
