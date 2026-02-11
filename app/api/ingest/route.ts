@@ -3,7 +3,6 @@ import { GithubRepoLoader } from "@langchain/community/document_loaders/web/gith
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { index } from "@/lib/pinecone";
-import { PineconeStore } from "@langchain/pinecone";
 import { IngestRequestSchema } from "@/lib/schema";
 import { IngestResponse } from "@/lib/types";
 
@@ -15,6 +14,19 @@ function extractRepoName(repoUrl: string): string {
 
 async function ingestRepo(repoUrl: string, token: string): Promise<void> {
   const repoName = extractRepoName(repoUrl);
+
+  // Validate inputs are ASCII
+  if (!/^[\x00-\x7F]*$/.test(repoUrl)) {
+    throw new Error("Repository URL contains non-ASCII characters");
+  }
+  if (!/^[\x00-\x7F]*$/.test(token)) {
+    throw new Error("GitHub token contains non-ASCII characters");
+  }
+
+  // Ensure repoUrl is a valid GitHub URL
+  if (!repoUrl.includes("github.com")) {
+    throw new Error("Invalid GitHub repository URL");
+  }
 
   const loader = new GithubRepoLoader(repoUrl, {
     branch: "main",
@@ -51,7 +63,13 @@ async function ingestRepo(repoUrl: string, token: string): Promise<void> {
   });
 
   // Loading documents from the github loader
-  const docs = await loader.load();
+  let docs;
+  try {
+    docs = await loader.load();
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to load repository: ${errorMsg}`);
+  }
   console.log(`Loaded ${docs.length} documents`);
 
   const splitter = new RecursiveCharacterTextSplitter({
@@ -69,10 +87,35 @@ async function ingestRepo(repoUrl: string, token: string): Promise<void> {
 
   console.log("Generating embeddings for chunks...");
 
-  await PineconeStore.fromDocuments(chunks, embeddings, {
-    pineconeIndex: index,
-    namespace: repoName,
-  });
+  const embeddingsList = await embeddings.embedDocuments(
+    chunks.map((chunk) => chunk.pageContent),
+  );
+
+  console.log(`Generated ${embeddingsList.length} embeddings`);
+
+  // vectors in the new Pinecone API format
+  const vectors = chunks.map((chunk, idx) => ({
+    id: `chunk-${Date.now()}-${idx}`,
+    values: embeddingsList[idx],
+    metadata: {
+      source: chunk.metadata.source || "unknown",
+      text: chunk.pageContent,
+    },
+  }));
+
+  console.log(`Upserting ${vectors.length} vectors to Pinecone (namespace: ${repoName})...`);
+
+  // Upserting in batches using the new API format
+  const batchSize = 100;
+  for (let i = 0; i < vectors.length; i += batchSize) {
+    const batch = vectors.slice(i, i + batchSize);
+    const batchNum = Math.floor(i / batchSize) + 1;
+    const totalBatches = Math.ceil(vectors.length / batchSize);
+    console.log(
+      `Upserting batch ${batchNum} of ${totalBatches}... (${batch.length} vectors)`,
+    );
+    await index.namespace(repoName).upsert({ records: batch });
+  }
 
   console.log("Ingestion complete!");
 }

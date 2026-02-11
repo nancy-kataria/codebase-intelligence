@@ -38,10 +38,28 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       includeMetadata: true,
     });
 
+    console.log("Pinecone matches found:", queryResponse.matches.length);
+
     const context = queryResponse.matches
       .map((m: PineconeMatch) => m.metadata?.text)
       .filter(Boolean)
       .join('\n\n');
+
+    // If no context found, return default analysis
+    if (!context || context.length === 0) {
+      console.log("No context found in Pinecone for namespace:", namespace);
+      const response: RepositoryMetadata = {
+        summary: "Repository ingestion completed but no code context could be retrieved. Please ensure the repository was successfully ingested.",
+        techStack: [],
+        patterns: [],
+        stats: {
+          files: 0,
+          lines: "0k",
+          languages: 0,
+        },
+      };
+      return NextResponse.json(response);
+    }
 
     // Extracting metadata from sources
     const sources = new Set<string>();
@@ -92,13 +110,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Generating summary, tech stack, and patterns using LLM
     const { text: analysisText } = await generateText({
       model: openai('gpt-4o'),
-      system: `You are a technical architect. Analyze the provided code snippets and respond ONLY with a valid JSON object (no markdown, no extra text):
+      system: `You are a technical architect. You MUST respond ONLY with a valid JSON object, nothing else.
+Do not include markdown code blocks or any other text.
+If you cannot analyze the code, still return valid JSON with appropriate default values.
+
+Response format (ALWAYS valid JSON):
 {
   "summary": "A concise 1-paragraph summary of the project",
   "techStack": ["technology1", "technology2"],
   "patterns": ["pattern1", "pattern2", "pattern3"]
 }`,
-      prompt: `Context from codebase:\n${context}`,
+      prompt: `Analyze the provided code context and return a JSON response.\n\nContext from codebase:\n${context || "No context available"}`,
     });
 
     // Parsing the LLM response - handle markdown code blocks
