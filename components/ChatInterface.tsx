@@ -4,7 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import { Send, FileCode, Sparkles, User, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import ReactMarkdown from "react-markdown";
 import type { ChatInterfaceProps, Message, Source } from "@/lib/types";
+import {markdownComponents} from "@/components/markdown-responses"
 
 let messageCounter = 0;
 const generateMessageId = () => `msg-${Date.now()}-${++messageCounter}`;
@@ -177,12 +179,22 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
                 message.role === "user" ? "chat-bubble-user" : "chat-bubble-ai"
               } px-4 py-3`}
             >
-              <p className="text-sm leading-relaxed">
-                {message.content}
-                {message.isStreaming && (
-                  <span className="inline-block w-2 h-4 ml-1 bg-primary animate-typing" />
-                )}
-              </p>
+              {message.role === "assistant" ? (
+                <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown
+                    components={markdownComponents}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                  {message.isStreaming && (
+                    <span className="inline-block w-2 h-4 ml-1 bg-primary animate-typing" />
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed">
+                  {message.content}
+                </p>
+              )}
 
               {/* Sources */}
               {message.sources && message.sources.length > 0 && (

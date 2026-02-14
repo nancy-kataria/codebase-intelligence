@@ -74,6 +74,14 @@ You should be able to answer questions related to the technology, requirements a
 A user can ask: "Where are the API endpoints defined?" or "What is the flow of data from the login 
 page to the database?" The answers should be detailed and not exceeding 2 paragraphs at a time.
 
+IMPORTANT: Format your responses using markdown for better readability:
+- Use **bold** for important terms and concepts
+- Use numbered lists (1. 2. 3.) for steps or multiple items
+- Use bullet points for features or characteristics
+- Use code formatting with backticks for file names, function names, or code snippets
+- Use headings (##) to organize complex responses
+- Use separate paragraphs for different topics
+
 Context from codebase:
 ${context}`,
       messages: messages.map((msg) => ({
