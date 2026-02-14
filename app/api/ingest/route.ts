@@ -138,21 +138,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const { repoUrl, token } = validationResult.data;
 
-    // calling the ingestion script in the background
-    ingestRepo(repoUrl, token)
-      .then(() => {
-        console.log("Ingestion completed successfully");
-      })
-      .catch((error) => {
-        console.error("Ingestion failed:", error);
-      });
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Ingestion started. Processing repository in background.",
-      } as IngestResponse
-    );
+    // Execute ingestion and wait for completion
+    try {
+      await ingestRepo(repoUrl, token);
+      return NextResponse.json(
+        {
+          success: true,
+          message: "Ingestion completed successfully.",
+        } as IngestResponse
+      );
+    } catch (ingestionError) {
+      console.error("Ingestion failed:", ingestionError);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Ingestion failed",
+          error: ingestionError instanceof Error ? ingestionError.message : "Unknown error",
+        } as IngestResponse,
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error("Error starting ingestion:", error);
     return NextResponse.json(
