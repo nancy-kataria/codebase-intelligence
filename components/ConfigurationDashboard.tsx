@@ -5,11 +5,6 @@ import { GitBranch, Key, ArrowRight, Shield, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import type { ConfigurationDashboardProps } from "@/lib/types";
 
 const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
@@ -27,31 +22,31 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
   const isValidUrl = repoUrl.includes("github.com");
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-lg animate-fade-in">
+    <div className="page-center">
+      <div className="container-sm animate-fade-in">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-6 glow-primary">
+          <div className="icon-box glow-primary" style={{ marginBottom: "1.5rem" }}>
             <GitBranch className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-semibold tracking-tight mb-2">
             Codebase Intelligence
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted">
             Connect your repository to unlock AI-powered insights
           </p>
         </div>
 
         {/* Configuration Card */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-xl">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="card">
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
             {/* Repository URL */}
-            <div className="space-y-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               <Label
                 htmlFor="repo-url"
-                className="text-sm font-medium flex items-center gap-2"
+                className="label"
               >
-                <GitBranch className="w-4 h-4 text-primary" />
+                <GitBranch />
                 GitHub Repository URL
               </Label>
               <Input
@@ -60,43 +55,32 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
                 placeholder="https://github.com/owner/repository"
                 value={repoUrl}
                 onChange={(e) => setRepoUrl(e.target.value)}
-                className="bg-input border-border focus:border-primary focus:ring-primary/20 font-mono text-sm h-12"
+                className="input"
               />
               {repoUrl && !isValidUrl && (
-                <p className="text-xs text-terminal-red">
+                <p className="text-xs text-error">
                   Please enter a valid GitHub URL
                 </p>
               )}
             </div>
 
             {/* Personal Access Token */}
-            <div className="space-y-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               <Label
                 htmlFor="token"
-                className="text-sm font-medium flex items-center gap-2"
+                className="label"
               >
-                <Key className="w-4 h-4 text-primary" />
+                <Key />
                 Personal Access Token
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" className="inline-flex">
-                      <Info className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="top"
-                    className="max-w-xs bg-popover border-border"
-                  >
-                    <div className="flex items-start gap-2">
-                      <Shield className="w-4 h-4 text-terminal-green mt-0.5 flex-shrink-0" />
-                      <p className="text-xs">
-                        Your token is used only for this session to fetch your
-                        codebase. It&apos;s never stored permanently and is
-                        cleared when you close this tab.
-                      </p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
+                <span className="tooltip-trigger">
+                  <Info style={{ width: "0.875rem", height: "0.875rem", color: "var(--muted-fg)" }} />
+                  <span className="tooltip-content">
+                    <span className="flex items-start gap-2">
+                      <Shield style={{ width: "1rem", height: "1rem", color: "var(--terminal-green)", flexShrink: 0, marginTop: "0.125rem" }} />
+                      <span>Your token is used only for this session to fetch your codebase. It&apos;s never stored permanently and is cleared when you close this tab.</span>
+                    </span>
+                  </span>
+                </span>
               </Label>
               <Input
                 id="token"
@@ -104,15 +88,14 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
                 placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                className="bg-input border-border focus:border-primary focus:ring-primary/20 font-mono text-sm h-12"
+                className="input"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted">
                 Need a token?{" "}
                 <a
                   href="https://github.com/settings/tokens/new"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline"
                 >
                   Create one here
                 </a>
@@ -125,33 +108,29 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
               disabled={!repoUrl || !token || !isValidUrl}
               variant="outline"
               size="default"
-              className="w-full h-12 border-primary/30 text-primary/70 bg-transparent hover:bg-primary/5 hover:border-primary/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-primary btn-lg btn-full"
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
             >
-              <span className="flex items-center gap-2">
-                Initialize Intelligence
+              Initialize Intelligence
                 <ArrowRight
-                  className={`w-4 h-4 transition-transform duration-200 ${isHovering ? "translate-x-1" : ""}`}
+                  style={{ transition: "transform 0.2s", transform: isHovering ? "translateX(4px)" : "none" }}
                 />
-              </span>
             </Button>
           </form>
 
           {/* Security Note */}
-          <div className="mt-6 pt-6 border-t border-border">
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <Shield className="w-4 h-4 text-terminal-green flex-shrink-0" />
+          <div className="security-note">
+            <Shield className="w-4 h-4 text-terminal-green flex-shrink-0" />
               <p>
                 End-to-end encrypted. Your code is processed in-memory and never
                 persisted.
               </p>
-            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="text-center text-xs text-muted mt-6">
           Supports public and private repositories
         </p>
       </div>
