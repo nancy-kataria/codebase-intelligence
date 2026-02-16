@@ -10,24 +10,21 @@ const IntelligenceHub = ({ repoUrl, metadata, onReset }: IntelligenceHubProps) =
   const repoName = repoUrl.split("/").slice(-2).join("/").replace(".git", "");
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
-      <div className="max-w-4xl mx-auto animate-fade-in">
+    <div className="page-padded">
+      <div className="container-lg animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <Button
-            variant="ghost"
             onClick={onReset}
-            className="text-muted-foreground hover:text-foreground"
+            className="btn btn-ghost"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft />
             New Repository
           </Button>
           <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-foreground"
+            className="btn btn-ghost btn-icon"
           >
-            <Settings className="w-5 h-5" />
+            <Settings style={{ width: "1.25rem", height: "1.25rem" }} />
           </Button>
         </div>
 
@@ -38,7 +35,7 @@ const IntelligenceHub = ({ repoUrl, metadata, onReset }: IntelligenceHubProps) =
         <ChatInterface repoUrl={repoUrl} namespace={repoName.split('/').pop()} />
 
         {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="text-center text-xs text-muted mt-6">
           Responses are generated based on your codebase. Always verify with source files.
         </p>
       </div>

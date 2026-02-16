@@ -150,57 +150,57 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
   const repoName = repoUrl.split("/").slice(-2).join("/").replace(".git", "");
 
   return (
-    <div className="flex flex-col h-[600px] bg-card border border-border rounded-xl overflow-hidden">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/30">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-sm font-medium">Intelligence Hub</span>
+    <div className="chat-container">
+      {/* Header */}
+      <div className="chat-header">
+        <div className="chat-header-title">
+          <Sparkles />
+          <span>Intelligence Hub</span>
         </div>
-        <span className="text-xs text-muted-foreground font-mono">{repoName}</span>
+        <span className="chat-header-repo">{repoName}</span>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+      <div className="chat-messages scrollbar-thin">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex gap-3 animate-slide-up ${
-              message.role === "user" ? "justify-end" : "justify-start"
+            className={`chat-row animate-slide-up ${
+              message.role === "user" ? "chat-row--user" : "chat-row--ai"
             }`}
           >
             {message.role === "assistant" && (
-              <div className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-4 h-4 text-primary" />
+              <div className="chat-avatar chat-avatar--ai">
+                <Sparkles />
               </div>
             )}
             <div
-              className={`max-w-[80%] ${
-                message.role === "user" ? "chat-bubble-user" : "chat-bubble-ai"
-              } px-4 py-3`}
+              className={`chat-bubble ${
+                message.role === "user" ? "chat-bubble--user" : "chat-bubble--ai"
+              }`}
             >
               {message.role === "assistant" ? (
-                <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                <div className="text-sm leading-relaxed prose prose-sm prose-invert max-w-none prose-p:mb-2 prose-ul:mb-2 prose-ol:mb-2 prose-li:mb-1">
                   <ReactMarkdown
                     components={markdownComponents}
                   >
                     {message.content}
                   </ReactMarkdown>
                   {message.isStreaming && (
-                    <span className="inline-block w-2 h-4 ml-1 bg-primary animate-typing" />
+                    <span className="chat-cursor" />
                   )}
                 </div>
               ) : (
-                <p className="text-sm leading-relaxed">
+                <div className="text-sm leading-relaxed">
                   {message.content}
-                </p>
+                </div>
               )}
 
               {/* Sources */}
               {message.sources && message.sources.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-border/50">
-                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                    <FileCode className="w-3 h-3" />
+                <div className="chat-sources">
+                  <p className="chat-sources-label">
+                    <FileCode />
                     Sources
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -210,12 +210,12 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
                         href={source.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="source-badge group"
+                        className="source-badge"
                       >
-                        <FileCode className="w-3 h-3" />
+                        <FileCode />
                         <span>{source.file}</span>
-                        <span className="text-muted-foreground">:{source.lines}</span>
-                        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <span className="text-muted">:{source.lines}</span>
+                        <ExternalLink className="external-icon" />
                       </a>
                     ))}
                   </div>
@@ -223,8 +223,8 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
               )}
             </div>
             {message.role === "user" && (
-              <div className="w-8 h-8 rounded-lg bg-secondary border border-border flex items-center justify-center flex-shrink-0">
-                <User className="w-4 h-4 text-muted-foreground" />
+              <div className="chat-avatar chat-avatar--user">
+                <User />
               </div>
             )}
           </div>
@@ -233,26 +233,26 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-border bg-secondary/30">
-        <div className="flex gap-2">
+      <form onSubmit={handleSubmit} className="chat-input-area">
+        <div className="chat-input-row">
           <Textarea
             ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask about the codebase..."
-            className="flex-1 min-h-[48px] max-h-32 resize-none bg-input border-border focus:border-primary focus:ring-primary/20"
+            className="textarea flex-1"
             rows={1}
           />
           <Button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="h-12 w-12 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="btn btn-primary btn-icon"
           >
-            <Send className="w-5 h-5" />
+            <Send style={{ width: "1.25rem", height: "1.25rem" }} />
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mt-2 text-center">
+        <p className="text-xs text-muted mt-2 text-center">
           Press Enter to send, Shift+Enter for new line
         </p>
       </form>
