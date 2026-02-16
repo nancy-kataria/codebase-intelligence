@@ -18,10 +18,7 @@ const processingSteps = [
   { message: "Authenticating with GitHub API...", delay: 800 },
   { message: "Cloning repository...", delay: 1500 },
   { message: "Analyzing project structure...", delay: 1200 },
-  { message: "Splitting files into chunks...", delay: 3000 },
-  { message: "Generating embeddings...", delay: 2500 },
-  { message: "Vectorizing code patterns...", delay: 3000 },
-  { message: "Indexing for retrieval...", delay: 800 },
+  { message: "Finishing repository ingestion...", delay: 1000 },
   { message: "Intelligence ready!", delay: 500 },
 ];
 
@@ -77,6 +74,7 @@ const ProcessingState = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [ingestionComplete, setIngestionComplete] = useState(false);
   const ingestionTriggeredRef = useRef(false);
 
   // Trigger ingestion on mount
@@ -91,19 +89,31 @@ const ProcessingState = ({
           repoUrl.split("/").pop()?.replace(".git", "") || "default";
         console.log("Starting ingestion for:", repoName);
 
-        // Call the ingest API
-        await ingestRepository(repoUrl, token);
-        console.log("Ingestion API called successfully");
-
-        // Add log for ingestion started
+        // Add initial log
         setLogs((prev) => [
           ...prev,
           {
-            message: "Repository ingestion started...",
+            message: "Initializing repository processing...",
             status: "active" as const,
             type: "info" as const,
           },
         ]);
+
+        // Call the ingest API and wait for completion
+        await ingestRepository(repoUrl, token);
+        console.log("Ingestion API completed successfully");
+
+        // Mark ingestion as complete
+        setIngestionComplete(true);
+        
+        // Update the log to show completion
+        setLogs((prev) =>
+          prev.map((log, index) =>
+            index === 0
+              ? { ...log, status: "complete" as const, message: "Repository processing initialized" }
+              : log
+          )
+        );
       } catch (err) {
         const errorMsg =
           err instanceof Error ? err.message : "Failed to start ingestion";
@@ -123,11 +133,17 @@ const ProcessingState = ({
     startIngestion();
   }, [repoUrl, token]);
 
+  // Animation effect - only start after ingestion completes
   useEffect(() => {
+    if (!ingestionComplete) return;
+    
     if (currentStep >= processingSteps.length) {
       // Generate summary after ingestion completes
       const generateAndComplete = async () => {
         try {
+          // Add small delay to ensure Pinecone consistency
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
           // Extract repo name from URL
           const repoName =
             repoUrl.split("/").pop()?.replace(".git", "") || "default";
@@ -180,7 +196,7 @@ const ProcessingState = ({
     }, processingSteps[currentStep].delay);
 
     return () => clearTimeout(timer);
-  }, [currentStep, onComplete]);
+  }, [currentStep, ingestionComplete, onComplete]);
 
   const repoName = repoUrl.split("/").slice(-2).join("/").replace(".git", "");
 
@@ -308,7 +324,7 @@ const ProcessingState = ({
 
         {/* Tip */}
         <p className="text-center text-xs text-muted mt-6">
-          This typically takes 30-60 seconds depending on repository size
+          Takes a fair amount of time for larger repositories
         </p>
       </div>
     </div>
