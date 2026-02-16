@@ -10,7 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { ConfigurationDashboardProps } from "@/lib/types"
+import type { ConfigurationDashboardProps } from "@/lib/types";
 
 const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
   const [repoUrl, setRepoUrl] = useState("");
@@ -47,7 +47,10 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Repository URL */}
             <div className="space-y-2">
-              <Label htmlFor="repo-url" className="text-sm font-medium flex items-center gap-2">
+              <Label
+                htmlFor="repo-url"
+                className="text-sm font-medium flex items-center gap-2"
+              >
                 <GitBranch className="w-4 h-4 text-primary" />
                 GitHub Repository URL
               </Label>
@@ -60,13 +63,18 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
                 className="bg-input border-border focus:border-primary focus:ring-primary/20 font-mono text-sm h-12"
               />
               {repoUrl && !isValidUrl && (
-                <p className="text-xs text-terminal-red">Please enter a valid GitHub URL</p>
+                <p className="text-xs text-terminal-red">
+                  Please enter a valid GitHub URL
+                </p>
               )}
             </div>
 
             {/* Personal Access Token */}
             <div className="space-y-2">
-              <Label htmlFor="token" className="text-sm font-medium flex items-center gap-2">
+              <Label
+                htmlFor="token"
+                className="text-sm font-medium flex items-center gap-2"
+              >
                 <Key className="w-4 h-4 text-primary" />
                 Personal Access Token
                 <Tooltip>
@@ -75,12 +83,16 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
                       <Info className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground transition-colors" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs bg-popover border-border">
+                  <TooltipContent
+                    side="top"
+                    className="max-w-xs bg-popover border-border"
+                  >
                     <div className="flex items-start gap-2">
                       <Shield className="w-4 h-4 text-terminal-green mt-0.5 flex-shrink-0" />
                       <p className="text-xs">
-                        Your token is used only for this session to fetch your codebase.
-                        It&apos;s never stored permanently and is cleared when you close this tab.
+                        Your token is used only for this session to fetch your
+                        codebase. It&apos;s never stored permanently and is
+                        cleared when you close this tab.
                       </p>
                     </div>
                   </TooltipContent>
@@ -111,13 +123,17 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
             <Button
               type="submit"
               disabled={!repoUrl || !token || !isValidUrl}
-              className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+              variant="outline"
+              size="default"
+              className="w-full h-12 border-primary/30 text-primary/70 bg-transparent hover:bg-primary/5 hover:border-primary/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               onMouseEnter={() => setIsHovering(true)}
               onMouseLeave={() => setIsHovering(false)}
             >
               <span className="flex items-center gap-2">
                 Initialize Intelligence
-                <ArrowRight className={`w-4 h-4 transition-transform duration-200 ${isHovering ? 'translate-x-1' : ''}`} />
+                <ArrowRight
+                  className={`w-4 h-4 transition-transform duration-200 ${isHovering ? "translate-x-1" : ""}`}
+                />
               </span>
             </Button>
           </form>
@@ -127,7 +143,8 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <Shield className="w-4 h-4 text-terminal-green flex-shrink-0" />
               <p>
-                End-to-end encrypted. Your code is processed in-memory and never persisted.
+                End-to-end encrypted. Your code is processed in-memory and never
+                persisted.
               </p>
             </div>
           </div>
