@@ -16,10 +16,7 @@ async function cleanup() {
     }
     
     // Delete each namespace
-    for (const namespace of namespaces) {
-      await index.deleteNamespace(namespace);
-    }
-    await index.deleteAll();
+     await index.deleteAll();
     
   } catch (error) {
     console.error("Error during cleanup:", error);
