@@ -2,6 +2,13 @@
 
 A Retrieval-Augmented Generation (RAG) application for intelligent codebase analysis. Upload any GitHub repository and get instant AI-powered insights, summaries, and context-aware Q&A about your code through semantic search and vector embeddings.
 
+[![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black?logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2-blue?logo=react)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4-green?logo=openai)](https://openai.com/)
+[![Pinecone](https://img.shields.io/badge/Pinecone-Vector%20DB-orange?logo=pinecone)](https://www.pinecone.io/)
+[![LangChain](https://img.shields.io/badge/LangChain-RAG-purple?logo=langchain)](https://langchain.com/)
+
 ## Features
 
 - 🔍 **Repository Analysis**: Automatically analyze GitHub repositories and extract meaningful insights
@@ -40,7 +47,7 @@ A Retrieval-Augmented Generation (RAG) application for intelligent codebase anal
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd code-onboarder
+cd codebase-intelligence
 ```
 
 2. Install dependencies:
@@ -50,10 +57,8 @@ npm install
 
 3. Set up environment variables:
 ```bash
-cp .env.example .env.local
+cp .env.local
 ```
-
-4. Configure `.env.local` using `.env.example`
 
 ### Development
 
@@ -79,12 +84,6 @@ The application implements a three-stage RAG workflow:
 npm run build
 ```
 
-### Preview
-
-```bash
-npm run preview
-```
-
 ## Project Structure
 
 ```
@@ -100,12 +99,28 @@ app/
     └── summarize/
         └── route.ts          # Summary generation endpoint
 
+components/
+├── ChatInterface.tsx         # Chat interface component
+├── ConfigurationDashboard.tsx # Repository configuration form
+├── IntelligenceHub.tsx       # Main dashboard component
+├── ProcessingState.tsx       # Processing status display
+├── ProjectSummaryCard.tsx    # Repository summary component
+├── markdown-responses.tsx    # Markdown response renderer
+└── ui/                       # Reusable UI components
+
+hooks/
+└── use-toast.ts              # Toast notification hook
+
 lib/
 ├── pinecone.ts               # Pinecone client initialization
 ├── schema.ts                 # Zod validation schemas
-└── types.ts                  # TypeScript type definitions
+├── types.ts                  # TypeScript type definitions
+└── utils.ts                  # Utility functions
 
-public/                        # Static assets
+scripts/
+└── pinecone_cleanup.ts       # Pinecone database cleanup script
+
+public/                       # Static assets
 ```
 
 
