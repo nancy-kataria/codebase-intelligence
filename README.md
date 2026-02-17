@@ -11,12 +11,12 @@ A Retrieval-Augmented Generation (RAG) application for intelligent codebase anal
 
 ## Features
 
-- 🔍 **Repository Analysis**: Automatically analyze GitHub repositories and extract meaningful insights
-- 📊 **Project Summarization**: Generate AI-powered summaries including tech stack, architecture patterns, and code statistics
-- 💬 **RAG-Powered Chat**: Ask natural language questions and receive context-aware answers by retrieving relevant code snippets and augmenting LLM prompts
-- 🚀 **Vector Embeddings**: Uses Pinecone vector database for semantic search and efficient code context retrieval
-- 🔐 **Privacy First**: Code is processed in-memory and never permanently stored
-- ⚡ **Real-time Processing**: Stream-based UI updates for smooth user experience
+- **Repository Analysis**: Automatically analyze GitHub repositories and extract meaningful insights
+- **Project Summarization**: Generate AI-powered summaries including tech stack, architecture patterns, and code statistics
+- **RAG-Powered Chat**: Ask natural language questions and receive context-aware answers by retrieving relevant code snippets and augmenting LLM prompts
+- **Vector Embeddings**: Uses Pinecone vector database for semantic search and efficient code context retrieval
+- **Privacy First**: Code is processed in-memory and never permanently stored
+- **Real-time Processing**: Stream-based UI updates for smooth user experience
 
 ## Tech Stack
 
