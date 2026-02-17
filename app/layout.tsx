@@ -14,7 +14,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Codebase Intelligence",
-  description: "",
+  description: "Retrieval-Augmented Generation (RAG) application for intelligent codebase analysis",
+  icons: {
+    icon: "/git-branch.svg",
+    shortcut: "/git-branch.svg",
+    apple: "/git-branch.svg",
+  },
 };
 
 export default function RootLayout({
