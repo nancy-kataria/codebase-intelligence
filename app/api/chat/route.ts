@@ -64,7 +64,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     
     const { text: response } = await generateText({
       model: openai("gpt-4o"),
-      system: `You are a helpful technical assistant analyzing a codebase. 
+      system: `You are a helpful technical assistant analyzing a codebase. Every
+question is to be answered in context with computer science, coding, software technologies.
 You have access to relevant code snippets and documentation from the repository.
 Answer questions about the codebase based on the provided context. If something is not in the context, say so.
 You should be able to answer questions related to the technology, requirements and architecture. 

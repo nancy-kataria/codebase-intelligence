@@ -117,6 +117,13 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
     setInput("");
     setIsLoading(true);
 
+    // Add loading indicator message
+    const loadingMessageId = generateMessageId();
+    setMessages((prev) => [
+      ...prev,
+      { id: loadingMessageId, role: "assistant", content: "AI is thinking...", isLoading: true },
+    ]);
+
     try {
       const repoName = namespace || repoUrl.split("/").pop()?.replace(".git", "") || "default";
 
@@ -125,6 +132,9 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
         .map(m => ({ role: m.role, content: m.content }));
 
       const result = await sendChatMessage(userMessage.content, repoName, conversationHistory);
+
+      // Remove loading message and start streaming
+      setMessages((prev) => prev.filter((msg) => msg.id !== loadingMessageId));
 
       await simulateStreaming(result.response, []);
     } catch (error) {
