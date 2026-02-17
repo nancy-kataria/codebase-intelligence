@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
 import { GithubRepoLoader } from "@langchain/community/document_loaders/web/github";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { OpenAIEmbeddings } from "@langchain/openai";
-import { index } from "@/lib/pinecone";
+import { Pinecone } from "@pinecone-database/pinecone";
+import { PineconeStore } from "@langchain/pinecone";
+import { NextRequest, NextResponse } from "next/server";
 import { IngestRequestSchema } from "@/lib/schema";
 import { IngestResponse } from "@/lib/types";
 
@@ -14,7 +15,6 @@ function extractRepoName(repoUrl: string): string {
 
 async function ingestRepo(repoUrl: string, token: string): Promise<void> {
   const repoName = extractRepoName(repoUrl);
-  console.log(`🚀 Starting ingestion for repository: ${repoName}`);
 
   // Validate inputs are ASCII
   if (!/^[\x00-\x7F]*$/.test(repoUrl)) {
@@ -28,8 +28,6 @@ async function ingestRepo(repoUrl: string, token: string): Promise<void> {
   if (!repoUrl.includes("github.com")) {
     throw new Error("Invalid GitHub repository URL");
   }
-
-  console.log(`📥 Initializing GitHub loader for: ${repoUrl}`);
 
   const loader = new GithubRepoLoader(repoUrl, {
     branch: "main",
@@ -65,122 +63,33 @@ async function ingestRepo(repoUrl: string, token: string): Promise<void> {
     ],
   });
 
-  // Loading documents from the github loader
-  console.log(`📚 Loading documents from GitHub repository...`);
-  let docs;
-  try {
-    docs = await loader.load();
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(`❌ Failed to load repository:`, errorMsg);
-    throw new Error(`Failed to load repository: ${errorMsg}`);
-  }
-  console.log(`✅ Loaded ${docs.length} documents from repository`);
+  const docs = await loader.load();
+  console.log(`Loaded ${docs.length} documents`);
 
-  const splitter = new RecursiveCharacterTextSplitter({
+  const spliter = new RecursiveCharacterTextSplitter({
     chunkSize: 1000,
     chunkOverlap: 200,
   });
 
-  // split the documents into chunks
-  console.log(`🔪 Splitting documents into chunks...`);
-  const chunks = await splitter.splitDocuments(docs);
-  console.log(`✅ Split into ${chunks.length} chunks`);
+  const chunks = await spliter.splitDocuments(docs);
+  console.log(`Split into ${chunks.length} chunks`);
 
-  // Clear docs from memory for large repos
-  docs.length = 0;
+  const pinecone = new Pinecone({
+    apiKey: process.env.PINECONE_API_KEY!,
+  });
+  const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
 
   const embeddings = new OpenAIEmbeddings({
+    apiKey: process.env.OPENAI_API_KEY,
     modelName: "text-embedding-3-small",
-    timeout: 120000, // 2 minute timeout
-    maxRetries: 3,
   });
 
-  console.log(`Generating embeddings for ${chunks.length} chunks...`);
+  await PineconeStore.fromDocuments(chunks, embeddings, {
+    pineconeIndex: index,
+    namespace: repoName,
+  });
 
-  let embeddingsList;
-  try {
-    // Process embeddings in smaller batches to avoid timeouts
-    const embeddingBatchSize = 50;
-    embeddingsList = [];
-    
-    for (let i = 0; i < chunks.length; i += embeddingBatchSize) {
-      const embeddingBatch = chunks.slice(i, i + embeddingBatchSize);
-      const embeddingBatchNum = Math.floor(i / embeddingBatchSize) + 1;
-      const totalEmbeddingBatches = Math.ceil(chunks.length / embeddingBatchSize);
-      
-      console.log(`Processing embedding batch ${embeddingBatchNum}/${totalEmbeddingBatches} (${embeddingBatch.length} chunks)`);
-      
-      const batchEmbeddings = await embeddings.embedDocuments(
-        embeddingBatch.map((chunk) => chunk.pageContent)
-      );
-      
-      embeddingsList.push(...batchEmbeddings);
-      console.log(`✓ Embedding batch ${embeddingBatchNum}/${totalEmbeddingBatches} completed`);
-      
-      // Small delay between embedding batches
-      if (embeddingBatchNum < totalEmbeddingBatches) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-    }
-  } catch (embeddingError) {
-    console.error("Failed to generate embeddings:", embeddingError);
-    throw new Error(`Embedding generation failed: ${embeddingError instanceof Error ? embeddingError.message : String(embeddingError)}`);
-  }
-
-  console.log(`✅ Generated ${embeddingsList.length} embeddings successfully`);
-
-  // vectors in the new Pinecone API format
-  console.log(`🔄 Creating vector objects...`);
-  const vectors = chunks.map((chunk, idx) => ({
-    id: `chunk-${Date.now()}-${idx}`,
-    values: embeddingsList[idx],
-    metadata: {
-      source: chunk.metadata.source || "unknown",
-      text: chunk.pageContent,
-    },
-  }));
-  console.log(`✅ Created ${vectors.length} vector objects`);
-
-  // Clear chunks and embeddings from memory
-  chunks.length = 0;
-  embeddingsList.length = 0;
-
-  console.log(`Upserting ${vectors.length} vectors to Pinecone (namespace: ${repoName})...`);
-
-  // Upserting in batches using the new API format with better error handling
-  const batchSize = 100;
-  const totalBatches = Math.ceil(vectors.length / batchSize);
-  let successfulBatches = 0;
-  
-  for (let i = 0; i < vectors.length; i += batchSize) {
-    const batch = vectors.slice(i, i + batchSize);
-    const batchNum = Math.floor(i / batchSize) + 1;
-    
-    console.log(
-      `Upserting batch ${batchNum} of ${totalBatches}... (${batch.length} vectors)`,
-    );
-    
-    try {
-      await index.namespace(repoName).upsert({ records: batch });
-      successfulBatches++;
-      console.log(`✓ Batch ${batchNum}/${totalBatches} completed successfully`);
-      
-      // Add small delay between batches to avoid rate limiting
-      if (batchNum < totalBatches) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    } catch (batchError) {
-      console.error(`✗ Batch ${batchNum}/${totalBatches} failed:`, batchError);
-      throw new Error(`Failed to upsert batch ${batchNum}/${totalBatches}: ${batchError instanceof Error ? batchError.message : String(batchError)}`);
-    }
-  }
-
-  console.log(`🎉 Ingestion complete! Successfully processed ${successfulBatches}/${totalBatches} batches (${vectors.length} total vectors)`);
-  
-  // Final cleanup
-  vectors.length = 0;
-  console.log(`📊 Repository "${repoName}" fully ingested and indexed in Pinecone`);
+  console.log("Ingestion complete!");
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
