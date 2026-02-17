@@ -5,6 +5,12 @@ import { index } from '@/lib/pinecone';
 import { SummarizeRequestSchema } from '@/lib/schema';
 import { PineconeMatch, RepositoryMetadata } from '@/lib/types';
 
+/**
+ * analyzes the vector-embedded codebase to generate metadata including Summary, Tech Stack, Archtectural patterns.
+ * 
+ * @param req - Next.js request object containing { namespace: string } in body
+ * @returns Promise<NextResponse<RepositoryMetadata>> - Structured repository analysis and statistics
+ */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json();
@@ -21,31 +27,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     const { namespace } = validationResult.data;
-    console.log("Starting summarize request", namespace ? `(namespace: ${namespace})` : "");
     
-    // embeddings for the query
     const { embedding } = await embed({
       model: openai.embedding('text-embedding-3-small'),
       value: 'Project overview and architecture',
     });
 
-    console.log("Embedding generated:", embedding.length);
-
-    // pinecone search for the embeddings
     const queryResponse = await index.namespace(namespace || '').query({
       vector: embedding,
       topK: 100,
       includeMetadata: true,
     });
 
-    console.log("Pinecone matches found:", queryResponse.matches.length);
-
     const context = queryResponse.matches
       .map((m: PineconeMatch) => m.metadata?.text)
       .filter(Boolean)
       .join('\n\n');
 
-    // If no context found, return default analysis
     if (!context || context.length === 0) {
       console.log("No context found in Pinecone for namespace:", namespace);
       const response: RepositoryMetadata = {
@@ -61,7 +59,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json(response);
     }
 
-    // Extracting metadata from sources
     const sources = new Set<string>();
     const fileExtensions = new Map<string, number>();
     let totalLines = 0;
@@ -69,11 +66,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     queryResponse.matches.forEach((m: PineconeMatch) => {
       if (m.metadata?.source) {
         sources.add(m.metadata.source);
-        // Extract file extension
         const ext = m.metadata.source.split('.').pop() || 'unknown';
         fileExtensions.set(ext, (fileExtensions.get(ext) || 0) + 1);
       }
-      // Count lines (estimate based on text length)
       if (m.metadata?.text) {
         totalLines += (m.metadata.text.match(/\n/g) || []).length + 1;
       }
@@ -105,9 +100,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       if (lang) uniqueLanguages.add(lang);
     });
 
-    console.log("Context prepared, length:", context.length);
-
-    // Generating summary, tech stack, and patterns using LLM
     const { text: analysisText } = await generateText({
       model: openai('gpt-4o'),
       system: `You are a technical architect. You MUST respond ONLY with a valid JSON object, nothing else.
@@ -131,16 +123,13 @@ Response format (ALWAYS valid JSON):
     };
 
     try {
-      // Strip markdown code blocks if present
       let jsonText = analysisText.trim();
       if (jsonText.startsWith('```')) {
-        // Remove ```json or ``` markers
         jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
       }
       
       const parsed = JSON.parse(jsonText);
       
-      // Validate parsed data
       if (parsed.summary && typeof parsed.summary === 'string') {
         analysis.summary = parsed.summary;
       }
@@ -150,14 +139,9 @@ Response format (ALWAYS valid JSON):
       if (Array.isArray(parsed.patterns)) {
         analysis.patterns = parsed.patterns.filter((p: unknown) => typeof p === 'string');
       }
-      
-      console.log("Analysis parsed successfully");
     } catch (error) {
-      // If parsing fails, log error but use fallback data
       console.error("Failed to parse analysis JSON:", error, "Response was:", analysisText.substring(0, 200));
     }
-
-    console.log("Analysis complete");
 
     const response: RepositoryMetadata = {
       summary: analysis.summary,

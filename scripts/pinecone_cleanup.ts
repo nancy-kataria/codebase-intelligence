@@ -1,12 +1,21 @@
-// scripts/cleanup.ts
 import { Pinecone } from "@pinecone-database/pinecone";
 
+/**
+ * Performs cleanup operations on the Pinecone vector database index
+ * 
+ * Connects to the configured Pinecone index and deletes all namespaces from the index.
+ * 
+ * @returns Promise<void> - Resolves when cleanup completes successfully
+ * 
+ * @throws {Error} When Pinecone API connection fails
+ * @throws {Error} When vector deletion operations fail
+ * @throws {Error} When environment variables are missing (PINECONE_API_KEY, PINECONE_INDEX_NAME)
+ */
 async function cleanup() {
   const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
   const index = pc.index(process.env.PINECONE_INDEX_NAME!);
   
   try {
-    // Get index stats to see all namespaces
     const stats = await index.describeIndexStats();
     const namespaces = Object.keys(stats.namespaces || {});
     
@@ -15,7 +24,6 @@ async function cleanup() {
       return;
     }
     
-    // Delete each namespace
      await index.deleteAll();
     
   } catch (error) {

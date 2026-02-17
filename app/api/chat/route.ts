@@ -5,6 +5,17 @@ import { index } from "@/lib/pinecone";
 import { PineconeMatch } from "@/lib/types";
 import { NextRequest, NextResponse } from "next/server";
 
+/**
+ * Chat API endpoint for querying the ingested codebase using RAG
+ * 
+ * 1. Validates the incoming chat request
+ * 2. Generates embeddings for the user's question
+ * 3. Performs semantic search against the vector database to find relevant code snippets
+ * 4. Uses the retrieved context to generate an informed response about the codebase
+ * 
+ * @param req - Next.js request object containing the chat message, namespace, and conversation history
+ * @returns JSON response with the AI-generated answer and context information
+ */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json();
@@ -22,13 +33,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const { message, namespace, conversationHistory } = validationResult.data;
 
-    console.log(
-      "Starting chat request:",
-      message.substring(0, 50),
-      `(namespace: ${namespace || "default"})`,
-    );
-
-    // 1. Generate embedding for the user message
+    
     const { embedding } = await embed({
       model: openai.embedding("text-embedding-3-small"),
       value: message,
@@ -36,35 +41,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     console.log("Embedding generated:", embedding.length);
 
-    // 2. Query Pinecone for relevant context
-    console.log("Querying Pinecone for context");
+    
     const queryResponse = await index.namespace(namespace || '').query({
       vector: embedding,
-      topK: 5, // Get top 5 most relevant chunks
+      topK: 10, 
       includeMetadata: true,
     });
 
-    console.log(
-      "Pinecone query complete, matches:",
-      queryResponse.matches.length,
-    );
-
-    // 3. Extract context from matches
+    
     const context = queryResponse.matches
       .map((m: PineconeMatch) => m.metadata?.text)
       .filter(Boolean)
-      .join("\n\n");
+      .join("\n\n")
 
-    console.log("Context prepared, length:", context.length);
-
-    // 4. Build conversation history for context
+    
     const messages = conversationHistory || [];
     messages.push({
       role: "user",
       content: message,
     });
 
-    // 5. Generate response with context
+    
     const { text: response } = await generateText({
       model: openai("gpt-4o"),
       system: `You are a helpful technical assistant analyzing a codebase. 
@@ -89,8 +86,6 @@ ${context}`,
         content: msg.content,
       })),
     });
-
-    console.log("Chat response generated");
 
     return NextResponse.json({
       response,

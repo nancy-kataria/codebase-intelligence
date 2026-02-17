@@ -11,7 +11,17 @@ import {markdownComponents} from "@/components/markdown-responses"
 let messageCounter = 0;
 const generateMessageId = () => `msg-${Date.now()}-${++messageCounter}`;
 
-// API call function for chat
+/**
+ * Handles communication with the backend chat API, sending the user's message
+ * along with conversation context to get an AI-generated response.
+ * 
+ * @param message - The user's chat message/question about the codebase
+ * @param namespace - The repository namespace to query
+ * @param conversationHistory - Array of previous messages to maintain conversation context
+ * @returns Promise resolving to AI response and context information about sources used
+ * 
+ * @throws {Error} When the API request fails or returns an error response
+ */
 const sendChatMessage = async (
   message: string,
   namespace: string,
@@ -70,7 +80,6 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
       { id: messageId, role: "assistant", content: "", isStreaming: true },
     ]);
 
-    // Simulate word-by-word streaming
     const words = text.split(" ");
     for (let i = 0; i < words.length; i++) {
       await new Promise((resolve) => setTimeout(resolve, 30 + Math.random() * 40));
@@ -83,7 +92,6 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
       );
     }
 
-    // Add sources after streaming completes
     setMessages((prev) =>
       prev.map((msg) =>
         msg.id === messageId
@@ -110,19 +118,13 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
     setIsLoading(true);
 
     try {
-      // Extract repo name for namespace
       const repoName = namespace || repoUrl.split("/").pop()?.replace(".git", "") || "default";
-      
-      // Build conversation history for context (excluding the welcome message)
+
       const conversationHistory = messages
         .filter(m => !m.id.startsWith("welcome"))
         .map(m => ({ role: m.role, content: m.content }));
 
-      console.log("Sending chat message to API...", { message: userMessage.content, namespace: repoName });
-
-      // Call the chat API
       const result = await sendChatMessage(userMessage.content, repoName, conversationHistory);
-      console.log("Chat API response:", result);
 
       await simulateStreaming(result.response, []);
     } catch (error) {

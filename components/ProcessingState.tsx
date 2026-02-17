@@ -22,7 +22,15 @@ const processingSteps = [
   { message: "Intelligence ready!", delay: 500 },
 ];
 
-// API call functions
+/**
+ * Initiates repository ingestion by calling the backend ingestion API endpoint
+ * 
+ * @param repoUrl - The GitHub repository URL to ingest
+ * @param token - GitHub personal access token with repository read permissions
+ * 
+ * @throws {Error} When the API request fails or returns an error response
+ * @throws {Error} When the ingestion process fails to start successfully
+ */
 const ingestRepository = async (
   repoUrl: string,
   token: string,
@@ -46,6 +54,15 @@ const ingestRepository = async (
   }
 };
 
+/**
+ * Generates a repository summary by calling the summarize API endpoint
+ * 
+ * @param namespace - The repository namespace to analyze
+ * @returns Promise<RepositoryMetadata> - Structured repository analysis and statistics
+ * 
+ * @throws {Error} When the API request fails or returns an error response
+ * @throws {Error} When the summary generation process fails
+ */
 const generateSummary = async (
   namespace: string,
 ): Promise<RepositoryMetadata> => {
@@ -85,11 +102,6 @@ const ProcessingState = ({
 
     const startIngestion = async () => {
       try {
-        const repoName =
-          repoUrl.split("/").pop()?.replace(".git", "") || "default";
-        console.log("Starting ingestion for:", repoName);
-
-        // Add initial log
         setLogs((prev) => [
           ...prev,
           {
@@ -99,14 +111,10 @@ const ProcessingState = ({
           },
         ]);
 
-        // Call the ingest API and wait for completion
         await ingestRepository(repoUrl, token);
-        console.log("Ingestion API completed successfully");
 
-        // Mark ingestion as complete
         setIngestionComplete(true);
         
-        // Update the log to show completion
         setLogs((prev) =>
           prev.map((log, index) =>
             index === 0
@@ -138,29 +146,19 @@ const ProcessingState = ({
     if (!ingestionComplete) return;
     
     if (currentStep >= processingSteps.length) {
-      // Generate summary after ingestion completes
       const generateAndComplete = async () => {
         try {
-          // Add small delay to ensure Pinecone consistency
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          // Extract repo name from URL
           const repoName =
             repoUrl.split("/").pop()?.replace(".git", "") || "default";
 
-          console.log(
-            "Calling generateSummary API...",
-            `namespace: ${repoName}`,
-          );
           const result = await generateSummary(repoName);
-          console.log("Metadata received:", result);
           setTimeout(() => onComplete(result), 800);
         } catch (err) {
           const errorMsg =
             err instanceof Error ? err.message : "Failed to generate summary";
           console.error("Summary generation error:", errorMsg);
           setError(errorMsg);
-          // Still complete even on error with default metadata
           setTimeout(
             () =>
               onComplete({
@@ -177,7 +175,6 @@ const ProcessingState = ({
       return;
     }
 
-    // Add new log entry
     setTimeout(() => {
       setLogs((prev) => [
         ...prev.map((log) => ({ ...log, status: "complete" as const })),
@@ -190,7 +187,6 @@ const ProcessingState = ({
       setProgress(((currentStep + 1) / processingSteps.length) * 100);
     }, 0);
 
-    // Move to next step
     const timer = setTimeout(() => {
       setCurrentStep((prev) => prev + 1);
     }, processingSteps[currentStep].delay);

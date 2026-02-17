@@ -7,12 +7,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { IngestRequestSchema } from "@/lib/schema";
 import { IngestResponse } from "@/lib/types";
 
+/**
+ * Extracts the repository name from a GitHub repository URL
+ * 
+ * @param repoUrl - The GitHub repository URL
+ * @returns The repository name string 
+ */
 function extractRepoName(repoUrl: string): string {
-  // Extract repo name from GitHub URL
   const match = repoUrl.match(/\/([^/]+?)(\.git)?$/);
   return match ? match[1] : "default";
 }
 
+/**
+ * Ingests a GitHub repository into a vector database for RAG-based codebase querying
+ * 
+ * 1. Validates inputs and checks for existing data to avoid duplicates
+ * 2. Loads source code files from the GitHub repository
+ * 3. Splits documents into smaller chunks
+ * 4. Generates embeddings
+ * 5. Stores vectors in Pinecone
+ * 
+ * @param repoUrl - The GitHub repository URL to ingest (must be a valid github.com URL)
+ * @param token - GitHub personal access token with repository read permissions
+ * @returns Promise<void> - Resolves when ingestion completes, throws error on failure
+ * 
+ * @throws {Error} repository URL contains non-ASCII characters
+ * @throws {Error} GitHub token contains non-ASCII characters  
+ * @throws {Error} repository URL is not a valid GitHub URL
+ * @throws {Error} GitHub authentication fails or repository is inaccessible
+ * @throws {Error} vector database operations fail
+ */
 async function ingestRepo(repoUrl: string, token: string): Promise<void> {
   const repoName = extractRepoName(repoUrl);
 
@@ -24,7 +48,6 @@ async function ingestRepo(repoUrl: string, token: string): Promise<void> {
     throw new Error("GitHub token contains non-ASCII characters");
   }
 
-  // Ensure repoUrl is a valid GitHub URL
   if (!repoUrl.includes("github.com")) {
     throw new Error("Invalid GitHub repository URL");
   }
@@ -34,9 +57,7 @@ async function ingestRepo(repoUrl: string, token: string): Promise<void> {
   });
   const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
 
-  //  Check if the namespace already exists
   const stats = await index.describeIndexStats();
-
   if (stats.namespaces && stats.namespaces[repoName]) {
     const vectorCount = stats.namespaces[repoName].recordCount;
     console.log(`Namespace "${repoName}" already exists with ${vectorCount} records.`);
@@ -102,6 +123,12 @@ async function ingestRepo(repoUrl: string, token: string): Promise<void> {
   console.log("Ingestion complete!");
 }
 
+/**
+ * POST API endpoint for ingesting GitHub repositories into the vector database
+ * 
+ * @param req - Next.js request object containing the ingestion request payload
+ * @returns Promise<NextResponse> - JSON response with success status and message or error
+ */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json();
@@ -120,7 +147,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const { repoUrl, token } = validationResult.data;
 
-    // Execute ingestion and wait for completion
     try {
       await ingestRepo(repoUrl, token);
       return NextResponse.json(
