@@ -1,4 +1,4 @@
-# Codebase Intelligence
+# <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline; vertical-align: middle; margin-right: 8px;"><circle cx="6" cy="6" r="3" stroke="#2563eb" stroke-width="2" fill="#2563eb"/><circle cx="18" cy="18" r="3" stroke="#16a34a" stroke-width="2" fill="#16a34a"/><circle cx="6" cy="18" r="3" stroke="#dc2626" stroke-width="2" fill="#dc2626"/><path d="M6 9v6" stroke="#6b7280" stroke-width="2"/><path d="M9 6h6l3 3" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Codebase Intelligence
 
 A Retrieval-Augmented Generation (RAG) application for intelligent codebase analysis. Upload any GitHub repository and get instant AI-powered insights, summaries, and context-aware Q&A about your code through semantic search and vector embeddings.
 
