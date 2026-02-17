@@ -29,6 +29,21 @@ async function ingestRepo(repoUrl: string, token: string): Promise<void> {
     throw new Error("Invalid GitHub repository URL");
   }
 
+  const pinecone = new Pinecone({
+    apiKey: process.env.PINECONE_API_KEY!,
+  });
+  const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
+
+  //  Check if the namespace already exists
+  const stats = await index.describeIndexStats();
+
+  if (stats.namespaces && stats.namespaces[repoName]) {
+    const vectorCount = stats.namespaces[repoName].recordCount;
+    console.log(`Namespace "${repoName}" already exists with ${vectorCount} records.`);
+    
+    return; 
+  }
+
   const loader = new GithubRepoLoader(repoUrl, {
     branch: "main",
     accessToken: token,
@@ -73,11 +88,6 @@ async function ingestRepo(repoUrl: string, token: string): Promise<void> {
 
   const chunks = await spliter.splitDocuments(docs);
   console.log(`Split into ${chunks.length} chunks`);
-
-  const pinecone = new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY!,
-  });
-  const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
 
   const embeddings = new OpenAIEmbeddings({
     apiKey: process.env.OPENAI_API_KEY,
