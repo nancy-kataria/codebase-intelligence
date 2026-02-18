@@ -15,8 +15,6 @@ A Retrieval-Augmented Generation (RAG) application for intelligent codebase anal
 - **Project Summarization**: Generate AI-powered summaries including tech stack, architecture patterns, and code statistics
 - **RAG-Powered Chat**: Ask natural language questions and receive context-aware answers by retrieving relevant code snippets and augmenting LLM prompts
 - **Vector Embeddings**: Uses Pinecone vector database for semantic search and efficient code context retrieval
-- **Privacy First**: Code is processed in-memory and never permanently stored
-- **Real-time Processing**: Stream-based UI updates for smooth user experience
 
 ## Tech Stack
 
@@ -82,45 +80,6 @@ The application implements a three-stage RAG workflow:
 
 ```bash
 npm run build
-```
-
-## Project Structure
-
-```
-app/
-├── layout.tsx                # Root layout
-├── page.tsx                  # Home page
-├── globals.css               # Global styles
-└── api/                      # Next.js API routes
-    ├── ingest/
-    │   └── route.ts          # Repository ingestion endpoint
-    ├── chat/
-    │   └── route.ts          # Chat endpoint
-    └── summarize/
-        └── route.ts          # Summary generation endpoint
-
-components/
-├── ChatInterface.tsx         # Chat interface component
-├── ConfigurationDashboard.tsx # Repository configuration form
-├── IntelligenceHub.tsx       # Main dashboard component
-├── ProcessingState.tsx       # Processing status display
-├── ProjectSummaryCard.tsx    # Repository summary component
-├── markdown-responses.tsx    # Markdown response renderer
-└── ui/                       # Reusable UI components
-
-hooks/
-└── use-toast.ts              # Toast notification hook
-
-lib/
-├── pinecone.ts               # Pinecone client initialization
-├── schema.ts                 # Zod validation schemas
-├── types.ts                  # TypeScript type definitions
-└── utils.ts                  # Utility functions
-
-scripts/
-└── pinecone_cleanup.ts       # Pinecone database cleanup script
-
-public/                       # Static assets
 ```
 
 
