@@ -4,7 +4,7 @@ on:
   schedule:
     # runs at 00:00 UTC every day
     - cron: '0 0 * * *'
-  workflow_dispatch:
+  workflow_dispatch: 
 
 jobs:
   cleanup:
@@ -20,13 +20,10 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run cleanup script
-        run: |
-          echo "Starting cleanup script..."
-          npx tsx scripts/pinecone_cleanup.ts
-          echo "Script finished with exit code: $?"
+        run: npx tsx scripts/pinecone_cleanup.ts
         env:
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
