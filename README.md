@@ -91,9 +91,5 @@ npm run build
 
 ## Contributing
 
-Contributions are welcome! Please ensure:
-- TypeScript types are properly defined
-- Zod schemas validate all API inputs
-- Components use established patterns
-- Code is well-documented
+This project is open source and contributions are welcome! Feel free to open issues, submit pull requests, or suggest improvements.
 
