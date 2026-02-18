@@ -24,7 +24,9 @@ async function cleanup() {
       return;
     }
     
-     await index.deleteAll();
+    for (const namespace of namespaces) {
+      await index.namespace(namespace).deleteAll();
+    }
     
   } catch (error) {
     console.error("Error during cleanup:", error);
