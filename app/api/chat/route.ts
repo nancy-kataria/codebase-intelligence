@@ -1,4 +1,4 @@
-import { generateText, embed } from "ai";
+import { streamText, embed } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { ChatRequestSchema } from "@/lib/schema";
 import { index } from "@/lib/pinecone";
@@ -6,17 +6,17 @@ import { PineconeMatch } from "@/lib/types";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
- * Chat API endpoint for querying the ingested codebase using RAG
+ * Chat API endpoint for querying the ingested codebase using RAG (streaming)
  * 
  * 1. Validates the incoming chat request
  * 2. Generates embeddings for the user's question
  * 3. Performs semantic search against the vector database to find relevant code snippets
- * 4. Uses the retrieved context to generate an informed response about the codebase
+ * 4. Streams an AI-generated response about the codebase back to the client
  * 
  * @param req - Next.js request object containing the chat message, namespace, and conversation history
- * @returns JSON response with the AI-generated answer and context information
+ * @returns Text stream response with the AI-generated answer
  */
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const validationResult = ChatRequestSchema.safeParse(body);
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
 
     
-    const { text: response } = await generateText({
+    const result = streamText({
       model: openai("gpt-4o"),
       system: `You are a helpful technical assistant analyzing a codebase. Every
 question is to be answered in context with computer science, coding, software technologies.
@@ -88,13 +88,7 @@ ${context}`,
       })),
     });
 
-    return NextResponse.json({
-      response,
-      context:
-        context.length > 0
-          ? `Used ${queryResponse.matches.length} relevant code snippets`
-          : "No relevant context found",
-    });
+    return result.toTextStreamResponse();
   } catch (error) {
     console.error("Chat error:", error);
     return NextResponse.json(

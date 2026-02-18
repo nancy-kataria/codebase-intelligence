@@ -5,28 +5,29 @@ import { Send, FileCode, Sparkles, User, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
-import type { ChatInterfaceProps, Message, Source } from "@/lib/types";
+import type { ChatInterfaceProps, Message } from "@/lib/types";
 import {markdownComponents} from "@/components/markdown-responses"
 
 let messageCounter = 0;
 const generateMessageId = () => `msg-${Date.now()}-${++messageCounter}`;
 
 /**
- * Handles communication with the backend chat API, sending the user's message
- * along with conversation context to get an AI-generated response.
+ * Streams a chat response from the backend API, reading text chunks in real time.
  * 
  * @param message - The user's chat message/question about the codebase
  * @param namespace - The repository namespace to query
  * @param conversationHistory - Array of previous messages to maintain conversation context
- * @returns Promise resolving to AI response and context information about sources used
+ * @param onChunk - Callback invoked with accumulated text as each chunk arrives
+ * @returns Promise resolving when the stream completes
  * 
  * @throws {Error} When the API request fails or returns an error response
  */
-const sendChatMessage = async (
+const streamChatMessage = async (
   message: string,
   namespace: string,
-  conversationHistory: Array<{ role: string; content: string }>
-): Promise<{ response: string; context: string }> => {
+  conversationHistory: Array<{ role: string; content: string }>,
+  onChunk: (text: string) => void
+): Promise<void> => {
   const response = await fetch("/api/chat", {
     method: "POST",
     headers: {
@@ -44,7 +45,19 @@ const sendChatMessage = async (
     throw new Error(error.error || "Failed to send message");
   }
 
-  return await response.json();
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("No response body");
+
+  const decoder = new TextDecoder();
+  let accumulated = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    accumulated += decoder.decode(value, { stream: true });
+    onChunk(accumulated);
+  }
 };
 
 const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
@@ -59,7 +72,6 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const streamingRef = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -68,40 +80,6 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const simulateStreaming = async (text: string, sources: Source[]) => {
-    // Prevent double execution
-    if (streamingRef.current) return;
-    streamingRef.current = true;
-
-    const messageId = generateMessageId();
-    setMessages((prev) => [
-      ...prev,
-      { id: messageId, role: "assistant", content: "", isStreaming: true },
-    ]);
-
-    const words = text.split(" ");
-    for (let i = 0; i < words.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 30 + Math.random() * 40));
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === messageId
-            ? { ...msg, content: words.slice(0, i + 1).join(" ") }
-            : msg
-        )
-      );
-    }
-
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId
-          ? { ...msg, isStreaming: false, sources }
-          : msg
-      )
-    );
-    setIsLoading(false);
-    streamingRef.current = false;
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,11 +95,11 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
     setInput("");
     setIsLoading(true);
 
-    // Add loading indicator message
-    const loadingMessageId = generateMessageId();
+    const assistantMessageId = generateMessageId();
+
     setMessages((prev) => [
       ...prev,
-      { id: loadingMessageId, role: "assistant", content: "AI is thinking...", isLoading: true },
+      { id: assistantMessageId, role: "assistant", content: "", isStreaming: true },
     ]);
 
     try {
@@ -131,23 +109,35 @@ const ChatInterface = ({ repoUrl, namespace }: ChatInterfaceProps) => {
         .filter(m => !m.id.startsWith("welcome"))
         .map(m => ({ role: m.role, content: m.content }));
 
-      const result = await sendChatMessage(userMessage.content, repoName, conversationHistory);
+      await streamChatMessage(userMessage.content, repoName, conversationHistory, (text) => {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId
+              ? { ...msg, content: text }
+              : msg
+          )
+        );
+      });
 
-      // Remove loading message and start streaming
-      setMessages((prev) => prev.filter((msg) => msg.id !== loadingMessageId));
-
-      await simulateStreaming(result.response, []);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, isStreaming: false }
+            : msg
+        )
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to send message";
       console.error("Chat error:", errorMessage);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: generateMessageId(),
-          role: "assistant",
-          content: `Error: ${errorMessage}`,
-        },
-      ]);
+    
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { ...msg, content: `Error: ${errorMessage}`, isStreaming: false }
+            : msg
+        )
+      );
+    } finally {
       setIsLoading(false);
     }
   };
