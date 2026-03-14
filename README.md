@@ -2,6 +2,12 @@
 
 A Retrieval-Augmented Generation (RAG) application for intelligent codebase analysis. Upload any GitHub repository and get instant AI-powered insights, summaries, and context-aware Q&A about your code through semantic search and vector embeddings.
 
+## Demo
+
+Watch the demo on YouTube: https://youtu.be/eKBP3mmAprc
+
+[![Watch the demo](https://img.youtube.com/vi/eKBP3mmAprc/maxresdefault.jpg)](https://youtu.be/eKBP3mmAprc)
+
 [![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.2-blue?logo=react)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
