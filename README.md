@@ -15,6 +15,14 @@ Watch the demo on YouTube: https://youtu.be/eKBP3mmAprc
 [![Pinecone](https://img.shields.io/badge/Pinecone-Vector%20DB-orange?logo=pinecone)](https://www.pinecone.io/)
 [![LangChain](https://img.shields.io/badge/LangChain-RAG-purple?logo=langchain)](https://langchain.com/)
 
+### Problem Statement
+
+Understanding large, complex codebases and navigating massive GitHub repositories is a major bottleneck for developers onboarding or trying to debug unfamiliar legacy code. I wanted to build a tool that allows engineers to interact with their code context-awarely and get instant, accurate architectural answers.
+
+### Impact
+
+The project resulted in a reliable, context-aware developer tool capable of instantly answering complex architectural questions about specific repositories. By successfully bridging the gap between raw, multi-file code syntax and semantic vector search, it demonstrated a possible way to reduce developer onboarding time.
+
 ## Features
 
 - **Repository Analysis**: Automatically analyze GitHub repositories and extract meaningful insights
