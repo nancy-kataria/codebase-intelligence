@@ -17,5 +17,6 @@ export const SummarizeRequestSchema = z.object({
 
 export const IngestRequestSchema = z.object({
   repoUrl: z.string().url("Invalid URL format").includes("github.com", { message: "Must be a valid GitHub URL" }),
-  token: z.string().min(1, "Token is required"),
+  //public repos can be fetched unauthenticated and github token is required for private repos
+  token: z.string().optional(),
 });
