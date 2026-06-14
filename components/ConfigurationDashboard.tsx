@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GitBranch, Key, ArrowRight, Shield, Info } from "lucide-react";
+import { GitBranch, Key, ArrowRight, Shield, Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (repoUrl && token) {
+    if (repoUrl && isValidUrl) {
       onSubmit(repoUrl, token);
     }
   };
@@ -72,6 +72,9 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
               >
                 <Key />
                 Personal Access Token
+                <span className="text-xs text-muted" style={{ fontWeight: 400 }}>
+                  (optional for public repos)
+                </span>
                 <span className="tooltip-trigger">
                   <Info style={{ width: "0.875rem", height: "0.875rem", color: "var(--muted-fg)" }} />
                   <span className="tooltip-content">
@@ -100,12 +103,23 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
                   Create one here
                 </a>
               </p>
+
+              {!token.trim() && (
+                <div className="token-warning" role="status">
+                  <AlertTriangle />
+                  <span>
+                    Without a token, only public repos work — GitHub limits
+                    unauthenticated access to ~60 requests/hr, so large repos may
+                    fail partway.
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={!repoUrl || !token || !isValidUrl}
+              disabled={!repoUrl || !isValidUrl}
               variant="outline"
               size="default"
               className="btn btn-primary btn-lg btn-full"
@@ -118,15 +132,6 @@ const ConfigurationDashboard = ({ onSubmit }: ConfigurationDashboardProps) => {
                 />
             </Button>
           </form>
-
-          {/* Security Note */}
-          <div className="security-note">
-            <Shield className="w-4 h-4 text-terminal-green flex-shrink-0" />
-              <p>
-                End-to-end encrypted. Your code is processed in-memory and never
-                persisted.
-              </p>
-          </div>
         </div>
 
         {/* Footer */}
