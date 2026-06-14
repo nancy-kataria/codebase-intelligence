@@ -21,7 +21,7 @@ Understanding large, complex codebases and navigating massive GitHub repositorie
 
 ### Impact
 
-The project resulted in a reliable, context-aware developer tool capable of instantly answering complex architectural questions about specific repositories. By successfully bridging the gap between raw, multi-file code syntax and semantic vector search, it demonstrated a possible way to reduce developer onboarding time.
+The project bridges the gap between raw, multi-file code syntax and semantic vector search, letting developers ask natural-language architectural questions about an unfamiliar repository and get grounded, code-informed answers. The goal is to shorten the time spent reading through a large codebase before becoming productive in it — a common bottleneck during onboarding or when debugging unfamiliar legacy code.
 
 ## Features
 
@@ -33,7 +33,7 @@ The project resulted in a reliable, context-aware developer tool capable of inst
 ## Tech Stack
 
 ### Frontend & Backend
-- **Next.js 14** - React framework with App Router and API routes
+- **Next.js 16** - React framework with App Router and API routes
 - **React 19** - UI framework
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
@@ -86,9 +86,20 @@ The application will be available at `http://localhost:3000`
 
 The application implements a three-stage RAG workflow:
 
-1. **Ingestion** (`/api/ingest`): Loads GitHub repository files, chunks them into semantic segments, generates vector embeddings, and stores them in Pinecone with metadata
+1. **Ingestion** (`/api/ingest`): Loads GitHub repository files, chunks them on **language-aware syntactic boundaries** (see below), generates vector embeddings, and stores them in Pinecone with metadata
 2. **Summarization** (`/api/summarize`): Retrieves code context vectors and augments GPT-4o prompts to generate architecture summaries and tech stack analysis
 3. **Conversation** (`/api/chat`): For each user query, retrieves relevant code context from Pinecone and augments the LLM prompt to provide accurate, code-informed responses
+
+### Chunking Strategy
+
+A RAG system is only as good as its chunks: each chunk becomes a single embedding, so a chunk that splits a function in half produces two vectors that each represent an incomplete idea, degrading retrieval quality.
+
+Rather than splitting code into fixed-size character windows, the ingestion pipeline chunks on **syntactic boundaries** so each embedding is a coherent unit:
+
+- Files are grouped by language (detected from their extension), and each group is split with language-specific separators via LangChain's `RecursiveCharacterTextSplitter.fromLanguage()` — preferring to break between functions, classes, and other top-level constructs rather than through them.
+- Supported languages include TypeScript/JavaScript, Python, Go, Rust, Java, C/C++, Ruby, PHP, and more; non-code files (JSON, YAML, CSS, plain text) fall back to a generic recursive splitter so nothing is dropped.
+
+This is heuristic, separator-based splitting (not a full tree-sitter AST parse) — a deliberate tradeoff that captures most of the benefit without per-language parser dependencies.
 
 ### Build
 
