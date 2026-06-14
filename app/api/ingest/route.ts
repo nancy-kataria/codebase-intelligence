@@ -114,6 +114,82 @@ function extractRepoName(repoUrl: string): string {
 }
 
 /**
+ * Parses the owner and repository name from a GitHub repository URL.
+ *
+ * @param repoUrl - The GitHub repository URL
+ * @returns { owner, repo } or null when the URL can't be parsed
+ */
+function parseGitHubRepo(repoUrl: string): { owner: string; repo: string } | null {
+  try {
+    const { pathname } = new URL(repoUrl);
+    const parts = pathname.split("/").filter(Boolean);
+    if (parts.length < 2) return null;
+    return { owner: parts[0], repo: parts[1].replace(/\.git$/, "") };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Verifies the repository is reachable with the given credentials *before* the
+ * expensive ingest, and resolves the repo's default branch. Maps GitHub's status
+ * codes to clear, user-facing messages so failures explain themselves.
+ *
+ * @param owner - Repository owner / organization
+ * @param repo - Repository name
+ * @param accessToken - Optional GitHub token (omitted for public repos)
+ * @returns The repository's default branch (e.g. "main" or "master")
+ *
+ * @throws {Error} with a friendly message on 401 / 403 / 404 / other failures
+ */
+async function verifyRepoAccess(
+  owner: string,
+  repo: string,
+  accessToken?: string
+): Promise<{ defaultBranch: string }> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "codebase-intelligence",
+  };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+    headers,
+  });
+
+  if (res.ok) {
+    const data = await res.json();
+    return { defaultBranch: data.default_branch || "main" };
+  }
+
+  if (res.status === 401) {
+    throw new Error(
+      "GitHub token is invalid or expired. Please check your personal access token."
+    );
+  }
+  if (res.status === 403) {
+    if (res.headers.get("x-ratelimit-remaining") === "0") {
+      throw new Error(
+        "GitHub rate limit reached. Add a personal access token (or wait a while) and try again."
+      );
+    }
+    throw new Error(
+      "Access to this repository is forbidden. Your token may lack the required permissions."
+    );
+  }
+  if (res.status === 404) {
+    throw new Error(
+      accessToken
+        ? "Repository not found, or your token doesn't have access to it. Check the URL and the token's repository permissions."
+        : "Repository not found, or it's private. If it's private, provide a personal access token with access to it."
+    );
+  }
+  throw new Error(
+    `Could not access repository (GitHub returned ${res.status}). Check the URL and try again.`
+  );
+}
+
+/**
  * Ingests a GitHub repository into a vector database for RAG-based codebase querying
  * 
  * 1. Validates inputs and checks for existing data to avoid duplicates
@@ -123,7 +199,8 @@ function extractRepoName(repoUrl: string): string {
  * 5. Stores vectors in Pinecone
  * 
  * @param repoUrl - The GitHub repository URL to ingest (must be a valid github.com URL)
- * @param token - GitHub personal access token with repository read permissions
+ * @param token - Optional GitHub access token. Omit for public repos; required
+ *                for private repos and recommended to avoid GitHub rate limits.
  * @returns Promise<IngestTimings> - Per-phase timings once ingestion completes
  *
  * @throws {Error} repository URL contains non-ASCII characters
@@ -132,19 +209,27 @@ function extractRepoName(repoUrl: string): string {
  * @throws {Error} GitHub authentication fails or repository is inaccessible
  * @throws {Error} vector database operations fail
  */
-async function ingestRepo(repoUrl: string, token: string): Promise<IngestTimings> {
+async function ingestRepo(repoUrl: string, token?: string): Promise<IngestTimings> {
   const repoName = extractRepoName(repoUrl);
+
+  // Treat empty/whitespace tokens as "no token" -> unauthenticated public fetch.
+  const accessToken = token?.trim() ? token.trim() : undefined;
 
   // Validate inputs are ASCII
   if (!/^[\x00-\x7F]*$/.test(repoUrl)) {
     throw new Error("Repository URL contains non-ASCII characters");
   }
-  if (!/^[\x00-\x7F]*$/.test(token)) {
+  if (accessToken && !/^[\x00-\x7F]*$/.test(accessToken)) {
     throw new Error("GitHub token contains non-ASCII characters");
   }
 
   if (!repoUrl.includes("github.com")) {
     throw new Error("Invalid GitHub repository URL");
+  }
+
+  const parsed = parseGitHubRepo(repoUrl);
+  if (!parsed) {
+    throw new Error("Could not parse owner/repository from the GitHub URL");
   }
 
   const pinecone = new Pinecone({
@@ -168,9 +253,16 @@ async function ingestRepo(repoUrl: string, token: string): Promise<IngestTimings
     };
   }
 
+  // if the repo is unreachable
+  const { defaultBranch } = await verifyRepoAccess(
+    parsed.owner,
+    parsed.repo,
+    accessToken
+  );
+
   const loader = new GithubRepoLoader(repoUrl, {
-    branch: "main",
-    accessToken: token,
+    branch: defaultBranch,
+    accessToken,
     ignoreFiles: [
       "package-lock.json",
       ".env",
@@ -207,6 +299,13 @@ async function ingestRepo(repoUrl: string, token: string): Promise<IngestTimings
   const docs = await loader.load();
   const tLoaded = performance.now();
   console.log(`Loaded ${docs.length} documents`);
+
+  if (docs.length === 0) {
+    throw new Error(
+      `No files could be loaded from the repository (branch "${defaultBranch}"). ` +
+      "Check that the repository isn't empty and that your token has access to it."
+    );
+  }
 
   // Chunk on language-aware syntactic boundaries so functions/classes stay
   // intact within a single embedding, instead of being cut mid-body.
