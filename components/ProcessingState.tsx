@@ -44,13 +44,13 @@ const ingestRepository = async (
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Failed to start ingestion");
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || data.message || "Failed to start ingestion");
   }
 
   const data = await response.json();
   if (!data.success) {
-    throw new Error(data.message || "Ingestion failed");
+    throw new Error(data.error || data.message || "Ingestion failed");
   }
 };
 
@@ -198,23 +198,32 @@ const ProcessingState = ({
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl">
-          <div className="bg-card border border-destructive/50 rounded-xl p-8 shadow-xl">
-            <div className="flex items-start gap-4">
-              <AlertCircle className="w-8 h-8 text-destructive flex-shrink-0 mt-1" />
-              <div>
-                <h2 className="text-xl font-semibold text-foreground mb-2">
-                  Ingestion Failed
-                </h2>
-                <p className="text-muted-foreground mb-4">{error}</p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-                >
-                  Try Again
-                </button>
+      <div className="page-center">
+        <div className="container-sm animate-fade-in">
+          <div className="card">
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                gap: "1rem",
+              }}
+            >
+              <div className="icon-box icon-box--error">
+                <AlertCircle />
               </div>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                Ingestion Failed
+              </h2>
+              <p className="text-muted">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="btn btn-primary btn-lg btn-full"
+                style={{ marginTop: "0.5rem" }}
+              >
+                Try Again
+              </button>
             </div>
           </div>
         </div>
