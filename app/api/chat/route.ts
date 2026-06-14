@@ -33,22 +33,27 @@ export async function POST(req: NextRequest) {
 
     const { message, namespace, conversationHistory } = validationResult.data;
 
-    
+    const tStart = performance.now();
+
     const { embedding } = await embed({
       model: openai.embedding("text-embedding-3-small"),
       value: message,
     });
+    const embedMs = Math.round(performance.now() - tStart);
 
     console.log("Embedding generated:", embedding.length);
 
-    
+    const tQuery = performance.now();
     const queryResponse = await index.namespace(namespace || '').query({
       vector: embedding,
-      topK: 10, 
+      topK: 10,
       includeMetadata: true,
     });
+    const queryMs = Math.round(performance.now() - tQuery);
+    const retrievalMs = embedMs + queryMs;
+    console.log(`[chat] embed=${embedMs}ms retrieval=${queryMs}ms (${queryResponse.matches.length} matches)`);
 
-    
+
     const context = queryResponse.matches
       .map((m: PineconeMatch) => m.metadata?.text)
       .filter(Boolean)
@@ -62,8 +67,20 @@ export async function POST(req: NextRequest) {
     });
 
     
+    let firstTokenAt: number | null = null;
     const result = streamText({
       model: openai("gpt-4o"),
+      onChunk() {
+        // Record time-to-first-token: when the model starts streaming output.
+        if (firstTokenAt === null) firstTokenAt = performance.now();
+      },
+      onFinish() {
+        const ttftMs = firstTokenAt ? Math.round(firstTokenAt - tStart) : null;
+        const totalMs = Math.round(performance.now() - tStart);
+        console.log(
+          `[chat] retrieval=${retrievalMs}ms ttft=${ttftMs ?? "n/a"}ms total=${totalMs}ms`
+        );
+      },
       system: `You are a helpful technical assistant analyzing a codebase. Every
 question is to be answered in context with computer science, coding, software technologies.
 You have access to relevant code snippets and documentation from the repository.
@@ -88,7 +105,13 @@ ${context}`,
       })),
     });
 
-    return result.toTextStreamResponse();
+    return result.toTextStreamResponse({
+      headers: {
+        "X-Embed-Ms": String(embedMs),
+        "X-Retrieval-Ms": String(retrievalMs),
+        "X-Matches": String(queryResponse.matches.length),
+      },
+    });
   } catch (error) {
     console.error("Chat error:", error);
     return NextResponse.json(

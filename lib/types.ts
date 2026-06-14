@@ -5,10 +5,26 @@ export interface PineconeMatch {
   };
 }
 
+/**
+ * Per-phase wall-clock timings (milliseconds) for a single ingestion run, so
+ * the pipeline's "time to ready" can be measured instead of estimated.
+ */
+export interface IngestTimings {
+  loadMs: number;
+  chunkMs: number;
+  embedStoreMs: number;
+  totalMs: number;
+  documents: number;
+  chunks: number;
+  /** True when the repo was already ingested and the work was skipped. */
+  skipped: boolean;
+}
+
 export interface IngestResponse {
   success: boolean;
   message: string;
   error?: string;
+  timings?: IngestTimings;
 }
 
 export interface RepositoryMetadata {
