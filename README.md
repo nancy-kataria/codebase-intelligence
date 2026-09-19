@@ -35,14 +35,14 @@ The project bridges the gap between raw, multi-file code syntax and semantic vec
 ```mermaid
 flowchart LR
     browser["Browser"]
-    ingest["Next.js /api/ingest"]
-    summarize["Next.js /api/summarize"]
-    chat["Next.js /api/chat"]
+    ingest["/api/ingest"]
+    summarize["/api/summarize"]
+    chat["/api/chat"]
     github["GitHub API"]
     embed["OpenAI text-embedding-3-small"]
     llm["OpenAI GPT-4o"]
-    pinecone[("Pinecone: one namespace per repo")]
-    cron["GitHub Actions nightly job"]
+    pinecone[("Pinecone")]
+    cron["GitHub Actions job"]
 
     browser -->|"repo URL and optional token"| ingest
     ingest -->|"access check, then load files"| github
