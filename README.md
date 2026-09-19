@@ -30,6 +30,49 @@ The project bridges the gap between raw, multi-file code syntax and semantic vec
 - **RAG-Powered Chat**: Ask natural language questions and receive context-aware answers by retrieving relevant code snippets and augmenting LLM prompts
 - **Vector Embeddings**: Uses Pinecone vector database for semantic search and efficient code context retrieval
 
+## Architecture
+
+```mermaid
+flowchart LR
+    browser["Browser"]
+    ingest["Next.js /api/ingest"]
+    summarize["Next.js /api/summarize"]
+    chat["Next.js /api/chat"]
+    github["GitHub API"]
+    embed["OpenAI text-embedding-3-small"]
+    llm["OpenAI GPT-4o"]
+    pinecone[("Pinecone: one namespace per repo")]
+    cron["GitHub Actions nightly job"]
+
+    browser -->|"repo URL and optional token"| ingest
+    ingest -->|"access check, then load files"| github
+    ingest -->|"language-aware chunks"| embed
+    browser -->|"asks for an overview"| summarize
+    browser -->|"asks a question"| chat
+    chat -->|"question as a vector"| embed
+    embed -->|"vectors with file metadata"| pinecone
+    summarize -->|"top 100 chunks"| pinecone
+    chat -->|"top 10 chunks"| pinecone
+    summarize -->|"code as context"| llm
+    chat -->|"code as context"| llm
+    llm -->|"streamed answer"| browser
+    cron -->|"clears namespaces"| pinecone
+```
+
+## How it works
+
+- **Ingestion.** Before doing any expensive work, `/api/ingest` asks the GitHub API whether the repository is actually reachable with the given token, and uses the same call to resolve the default branch — so a bad URL, an expired token, or a rate limit comes back as a clear message instead of a stack trace halfway through a load. Each repository is indexed into its own Pinecone namespace, and a repository that already has vectors is skipped rather than embedded twice.
+
+- **Chunking.** A RAG system is only as good as its chunks: each chunk becomes a single embedding, so a chunk that splits a function in half produces two vectors that each represent an incomplete idea. Instead of fixed-size character windows, files are grouped by the language detected from their extension and split with language-specific separators via LangChain's `RecursiveCharacterTextSplitter.fromLanguage()`, which prefers to break between functions and classes rather than through them. TypeScript/JavaScript, Python, Go, Rust, Java, C/C++, Ruby, PHP and more are handled this way; non-code files such as JSON, YAML and CSS fall back to a generic recursive splitter so nothing is dropped from the index. This is heuristic, separator-based splitting rather than a full tree-sitter AST parse — a deliberate tradeoff that captures most of the benefit without per-language parser dependencies.
+
+- **Retrieval.** Questions and code are embedded with the same model, so a question can be matched against code by meaning rather than by keyword. Every query is scoped to one repository's namespace: `/api/chat` pulls the 10 closest chunks for a question, while `/api/summarize` pulls 100 and derives the file count, language mix and rough line count from the metadata that came back with them.
+
+- **Answering.** Retrieved code is placed in the system prompt, so GPT-4o answers from the repository in front of it and is told to say so when something isn't in the context. Answers stream to the browser token by token and render as markdown; the route records how long embedding and retrieval took and when the first token arrived, and returns the retrieval timings as response headers.
+
+- **Validation.** Every route parses its body with a Zod schema before touching an external service, so malformed input is rejected at the edge with a field-level message and the handlers below can rely on their types.
+
+- **Cleanup.** Indexing repositories costs storage, so a scheduled GitHub Actions workflow clears the index's namespaces nightly. The demo stays cheap to host, and re-running a repository simply re-ingests it.
+
 ## Tech Stack
 
 ### Frontend & Backend
@@ -81,25 +124,6 @@ npm run dev
 ```
 
 The application will be available at `http://localhost:3000`
-
-### RAG Pipeline
-
-The application implements a three-stage RAG workflow:
-
-1. **Ingestion** (`/api/ingest`): Loads GitHub repository files, chunks them on **language-aware syntactic boundaries** (see below), generates vector embeddings, and stores them in Pinecone with metadata
-2. **Summarization** (`/api/summarize`): Retrieves code context vectors and augments GPT-4o prompts to generate architecture summaries and tech stack analysis
-3. **Conversation** (`/api/chat`): For each user query, retrieves relevant code context from Pinecone and augments the LLM prompt to provide accurate, code-informed responses
-
-### Chunking Strategy
-
-A RAG system is only as good as its chunks: each chunk becomes a single embedding, so a chunk that splits a function in half produces two vectors that each represent an incomplete idea, degrading retrieval quality.
-
-Rather than splitting code into fixed-size character windows, the ingestion pipeline chunks on **syntactic boundaries** so each embedding is a coherent unit:
-
-- Files are grouped by language (detected from their extension), and each group is split with language-specific separators via LangChain's `RecursiveCharacterTextSplitter.fromLanguage()` — preferring to break between functions, classes, and other top-level constructs rather than through them.
-- Supported languages include TypeScript/JavaScript, Python, Go, Rust, Java, C/C++, Ruby, PHP, and more; non-code files (JSON, YAML, CSS, plain text) fall back to a generic recursive splitter so nothing is dropped.
-
-This is heuristic, separator-based splitting (not a full tree-sitter AST parse) — a deliberate tradeoff that captures most of the benefit without per-language parser dependencies.
 
 ### Build
 
